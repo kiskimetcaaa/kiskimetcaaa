@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kiskimetca</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@500;600;700&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+// 🔊 SONS
+const sounds = {
+  click: new Audio('sounds/click.mp3'),
+  vote: new Audio('sounds/vote.mp3'),
+  correct: new Audio('sounds/correct.mp3'),
+  wrong: new Audio('sounds/wrong.mp3')
+};
+
+let soundEnabled = true;
+
+function playSound(name) {
+  if (!soundEnabled || !sounds[name]) return;
+  sounds[name].currentTime = 0;
+  sounds[name].play().catch(() => {});
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  document.getElementById('sound-btn').textContent = soundEnabled ? '🔊' : '🔇';
+}
+
+:root {
+  --bg: #080810;
+  --surface: #0f0f1a;
+  --surface2: #161625;
+  --surface3: #1c1c2e;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.11);
+  --green: #1DB954;
+  --green2: #22e563;
+  --green-dim: rgba(29,185,84,0.12);
+  --text: #eeeaf5;
+  --muted: #7a7a99;
+  --danger: #ff5c5c;
+  --radius: 16px;
+  --font-h: 'Clash Display', sans-serif;
+  --font-b: 'Cabinet Grotesk', sans-serif;
+}
+
+/* ── FONT FALLBACK ── */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
+:root { --font-h: 'Syne', sans-serif; --font-b: 'DM Sans', sans-serif; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-b);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BG GLOW ── */
+body::before {
+  content: '';
+  position: fixed; top: -120px; left: 50%;
+  transform: translateX(-50%);
+  width: 700px; height: 400px;
+  background: radial-gradient(ellipse, rgba(29,185,84,0.07) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+  animation: bgPulse 6s ease-in-out infinite;
+}
+@keyframes bgPulse {
+  0%,100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+  50%      { opacity: 1;   transform: translateX(-50%) scale(1.15); }
+}
+
+/* ── NAV ── */
+.nav {
+  display: flex;
+  background: rgba(15,15,26,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.nav button {
+  flex: 1; padding: 16px 8px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font-b); font-size: 12px; font-weight: 500;
+  color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+  border-bottom: 2px solid transparent; transition: all 0.25s;
+  position: relative;
+}
+.nav button::after {
+  content: '';
+  position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 2px; background: var(--green);
+  transition: width 0.3s cubic-bezier(.4,0,.2,1);
+  border-radius: 2px;
+}
+.nav button.active { color: var(--green); }
+.nav button.active::after { width: 60%; }
+.nav button:hover:not(.active) { color: var(--text); }
+
+/* ── PAGES ── */
+.page { display: none; padding: 28px 20px 60px; max-width: 580px; margin: 0 auto; position: relative; z-index: 1; }
+.page.active { display: block; animation: pageIn 0.4s cubic-bezier(.4,0,.2,1); }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── LOGO ── */
+.logo-wrap { margin-bottom: 28px; }
+.logo {
+  font-family: var(--font-h); font-size: 34px; font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1;
+  background: linear-gradient(135deg, #fff 30%, #1DB954 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo-dot { color: var(--green); -webkit-text-fill-color: var(--green); }
+.subtitle { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+/* ── FORM ── */
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 7px;
+}
+.field input {
+  width: 100%; padding: 13px 16px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 12px; color: var(--text);
+  font-family: var(--font-b); font-size: 14px;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.field input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(29,185,84,0.1);
+  background: var(--surface3);
+}
+.field input::placeholder { color: var(--muted); }
+.field .hint {
+  font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.6;
+}
+.field .hint code {
+  background: var(--surface3); border: 1px solid var(--border2);
+  padding: 2px 6px; border-radius: 5px; font-size: 10px; color: var(--green);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ── TYPE TABS ── */
+.type-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+.type-tab {
+  flex: 1; padding: 9px 4px; background: var(--surface2);
+  border: 1px solid var(--border2); border-radius: 10px; cursor: pointer;
+  font-family: var(--font-b); font-size: 11px; font-weight: 500;
+  color: var(--muted); text-align: center; transition: all 0.2s;
+}
+.type-tab.active {
+  border-color: var(--green); color: var(--green);
+  background: var(--green-dim);
+  box-shadow: 0 0 12px rgba(29,185,84,0.15);
+}
+.type-tab:hover:not(.active) { color: var(--text); border-color: var(--border2); background: var(--surface3); }
+
+/* ── BUTTON ── */
+.btn {
+  width: 100%; padding: 15px;
+  border: none; border-radius: 12px; cursor: pointer;
+  font-family: var(--font-h); font-size: 15px; font-weight: 700;
+  letter-spacing: 0.02em; transition: all 0.18s; outline: none;
+  position: relative; overflow: hidden;
+}
+.btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background 0.15s;
+}
+.btn:hover::after { background: rgba(255,255,255,0.06); }
+.btn:active { transform: scale(0.97); }
+.btn-accent {
+  background: linear-gradient(135deg, #1DB954 0%, #17a347 100%);
+  color: #000;
+  box-shadow: 0 4px 20px rgba(29,185,84,0.25);
+}
+.btn-accent:hover { box-shadow: 0 6px 28px rgba(29,185,84,0.4); transform: translateY(-1px); }
+.btn-ghost {
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border2);
+}
+.btn-ghost:hover { background: var(--surface3); }
+.btn-icon { font-size: 18px; margin-right: 8px; vertical-align: -2px; }
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px; background: var(--border);
+  margin: 24px 0; position: relative;
+}
+.divider::after {
+  content: '◆'; position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  background: var(--bg); padding: 0 8px;
+  font-size: 8px; color: var(--muted); letter-spacing: 0.1em;
+}
+
+/* ── PLAYLIST ── */
+.playlist-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.playlist-count {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted);
+}
+.playlist-count span { color: var(--green); }
+
+.song-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; margin-bottom: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); position: relative;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  animation: cardIn 0.3s cubic-bezier(.4,0,.2,1) backwards;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.song-card:hover {
+  border-color: var(--border2);
+  transform: translateX(3px);
+  box-shadow: 4px 0 0 0 var(--green);
+}
+.song-num {
+  font-family: var(--font-h); font-size: 22px; font-weight: 800;
+  color: var(--green); min-width: 32px; opacity: 0.7;
+}
+.song-info { flex: 1; min-width: 0; }
+.song-title { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-by { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.song-del {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 14px; padding: 6px;
+  transition: color 0.15s; border-radius: 6px;
+  opacity: 0;
+}
+.song-card:hover .song-del { opacity: 1; }
+.song-del:hover { color: var(--danger); background: rgba(255,92,92,0.1); }
+
+/* ── PLAY PAGE ── */
+.msg { text-align: center; padding: 60px 0; color: var(--muted); font-size: 14px; }
+.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.6; }
+
+.launch-hero {
+  text-align: center; padding: 40px 0;
+}
+.launch-hero h2 {
+  font-family: var(--font-h); font-size: 26px; font-weight: 700;
+  color: var(--text); margin-bottom: 8px;
+}
+.launch-hero p { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+
+/* ── ROUND INFO ── */
+.round-info {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+.round-badge {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-h); font-size: 13px; font-weight: 700;
+  background: var(--surface2); padding: 8px 14px; border-radius: 10px;
+  border: 1px solid var(--border2);
+}
+.round-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.skip-btn {
+  background: none; border: 1px solid var(--border2); color: var(--muted);
+  padding: 8px 16px; border-radius: 10px; cursor: pointer;
+  font-family: var(--font-b); font-size: 12px; font-weight: 500;
+  transition: all 0.15s;
+}
+.skip-btn:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+
+/* ── WAVEFORM ── */
+.now-playing-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.waveform {
+  display: flex; align-items: flex-end; gap: 4px; height: 44px;
+  margin-bottom: 20px; padding: 0 4px;
+}
+.bar {
+  flex: 1; background: linear-gradient(to top, var(--green), var(--green2));
+  border-radius: 3px;
+  animation: wave 0.9s ease-in-out infinite;
+  opacity: 0.75;
+  box-shadow: 0 0 6px rgba(29,185,84,0.3);
+}
+.bar:nth-child(1) { animation-delay: 0.0s; }
+.bar:nth-child(2) { animation-delay: 0.12s; }
+.bar:nth-child(3) { animation-delay: 0.24s; }
+.bar:nth-child(4) { animation-delay: 0.36s; }
+.bar:nth-child(5) { animation-delay: 0.18s; }
+.bar:nth-child(6) { animation-delay: 0.30s; }
+.bar:nth-child(7) { animation-delay: 0.06s; }
+.bar:nth-child(8) { animation-delay: 0.42s; }
+.bar:nth-child(9) { animation-delay: 0.15s; }
+.bar:nth-child(10) { animation-delay: 0.27s; }
+.bar:nth-child(11) { animation-delay: 0.09s; }
+.bar:nth-child(12) { animation-delay: 0.33s; }
+.bar.paused { animation-play-state: paused; height: 4px !important; opacity: 0.3; }
+@keyframes wave {
+  0%,100% { height: 8px; }
+  50%      { height: 36px; }
+}
+
+/* ── SPOTIFY EMBED ── */
+#sp-container {
+  border-radius: var(--radius); overflow: hidden;
+  margin-bottom: 20px; position: relative;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+#sp-container iframe {
+  display: block; width: 100%; border: none; border-radius: var(--radius);
+}
+
+/* ── EMBED ERROR ── */
+.embed-error {
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 32px 20px; text-align: center;
+  background: var(--surface2); border-radius: var(--radius);
+  border: 1px dashed rgba(255,92,92,0.3); margin-bottom: 20px;
+}
+.embed-error.show { display: flex; }
+.embed-error p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.embed-error strong { color: var(--danger); }
+.embed-error a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 22px;
+  background: #1DB954; color: #000; border-radius: 10px;
+  font-family: var(--font-h); font-size: 13px; font-weight: 700;
+  text-decoration: none; transition: opacity 0.15s;
+}
+.embed-error a:hover { opacity: 0.85; }
+
+/* ── VOTE ── */
+.vote-section { margin-top: 26px; }
+.vote-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 14px;
+}
+.vote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.vote-btn {
+  padding: 16px 14px; background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: var(--radius); cursor: pointer; text-align: left;
+  transition: all 0.2s; position: relative; overflow: hidden;
+  animation: voteIn 0.3s cubic-bezier(.4,0,.2,1) backwards;
+}
+@keyframes voteIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.vote-btn:hover {
+  border-color: var(--green);
+  background: var(--surface3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+.vote-btn.voted {
+  border-color: var(--green);
+  background: var(--green-dim);
+  box-shadow: 0 0 16px rgba(29,185,84,0.2);
+}
+.vote-btn .vname {
+  font-family: var(--font-h); font-size: 15px; font-weight: 700;
+  color: var(--text); display: block; margin-bottom: 4px;
+}
+.vote-btn .vcnt {
+  font-size: 24px; font-weight: 800; font-family: var(--font-h);
+  color: var(--green); position: absolute; right: 14px; top: 50%;
+  transform: translateY(-50%);
+  transition: transform 0.15s;
+}
+.vote-btn.voted .vcnt { transform: translateY(-50%) scale(1.2); }
+.vote-bar {
+  position: absolute; bottom: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg, var(--green), var(--green2));
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  border-radius: 0 3px 3px 0;
+}
+
+/* ── REVEAL ── */
+.reveal-card {
+  background: linear-gradient(140deg, #0c2a16 0%, #091a0d 60%, #0d1f10 100%);
+  border: 1px solid rgba(29,185,84,0.25);
+  border-radius: 20px; padding: 32px 28px; text-align: center;
+  margin-bottom: 20px; position: relative; overflow: hidden;
+  animation: revealPop 0.5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes revealPop {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.reveal-card::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(29,185,84,0.18) 0%, transparent 65%);
+}
+.reveal-card::after {
+  content: '';
+  position: absolute; bottom: -40px; left: -40px;
+  width: 150px; height: 150px;
+  background: radial-gradient(circle, rgba(29,185,84,0.1) 0%, transparent 65%);
+}
+.reveal-label {
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(29,185,84,0.7); margin-bottom: 10px; font-weight: 700;
+}
+.reveal-name {
+  font-family: var(--font-h); font-size: 42px; font-weight: 800;
+  background: linear-gradient(135deg, #fff 0%, var(--green2) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1; margin-bottom: 10px;
+}
+.reveal-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.correct-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(29,185,84,0.15); color: var(--green2);
+  border: 1px solid rgba(29,185,84,0.3);
+  padding: 6px 16px; border-radius: 24px;
+  font-size: 13px; font-weight: 500; margin-top: 12px;
+}
+
+/* ── SCORES ── */
+.score-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px; margin-bottom: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+  animation: scoreIn 0.4s cubic-bezier(.4,0,.2,1) backwards;
+}
+@keyframes scoreIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.score-row:nth-child(1) { animation-delay: 0s; }
+.score-row:nth-child(2) { animation-delay: 0.06s; }
+.score-row:nth-child(3) { animation-delay: 0.12s; }
+.score-row:nth-child(4) { animation-delay: 0.18s; }
+.score-row:nth-child(5) { animation-delay: 0.24s; }
+.score-row:hover { border-color: var(--border2); transform: translateX(4px); }
+.score-row:first-child {
+  border-color: rgba(255,215,0,0.25);
+  background: linear-gradient(90deg, rgba(255,215,0,0.04) 0%, var(--surface) 100%);
+}
+.score-row:first-child::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(to bottom, #FFD700, #FFA500);
+}
+.score-rank { font-family: var(--font-h); font-size: 22px; font-weight: 800; min-width: 36px; }
+.rank-1 { color: #FFD700; filter: drop-shadow(0 0 8px rgba(255,215,0,0.5)); }
+.rank-2 { color: #C0C0C0; filter: drop-shadow(0 0 6px rgba(192,192,192,0.4)); }
+.rank-3 { color: #CD7F32; filter: drop-shadow(0 0 6px rgba(205,127,50,0.4)); }
+.rank-other { color: var(--muted); }
+.score-name { flex: 1; font-size: 16px; font-weight: 700; font-family: var(--font-h); }
+.score-right { text-align: right; }
+.score-pts { font-family: var(--font-h); font-size: 26px; font-weight: 800; color: var(--green); }
+.score-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(8px);
+  background: var(--surface3); border: 1px solid var(--border2);
+  padding: 11px 22px; border-radius: 28px; font-size: 13px; font-weight: 500;
+  color: var(--text); z-index: 200; pointer-events: none;
+  opacity: 0; transition: opacity 0.25s, transform 0.25s; white-space: nowrap;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── CONFETTI PIECES ── */
+.confetti-piece {
+  position: fixed; top: -20px; pointer-events: none; z-index: 300;
+  animation: confettiFall linear forwards;
+  border-radius: 2px;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* ── PROGRESS INDICATOR ── */
+.progress-wrap {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+}
+.progress-bar-outer {
+  flex: 1; height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden;
+}
+.progress-bar-inner {
+  height: 100%; background: linear-gradient(90deg, var(--green), var(--green2));
+  border-radius: 4px; transition: width 0.5s ease;
+}
+.progress-text { font-size: 11px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="active" onclick="goTab('add')">＋ Ajouter</button>
+  <button onclick="goTab('play')">▶ Jouer</button>
+  <button onclick="goTab('scores')">🏆 Scores</button>
+
+   <!-- 🔊 BOUTON SON -->
+  <button onclick="toggleSound()" id="sound-btn">🔊</button>
+
+</nav>
+
+<!-- PAGE ADD -->
+<div class="page active" id="page-add">
+  <div class="logo-wrap">
+    <div class="logo">Guess<span style="-webkit-text-fill-color:var(--green);color:var(--green)">Track</span></div>
+    <div class="subtitle">Ajoute des musiques Spotify — le premier à deviner gagne !</div>
+  </div>
+
+  <div class="field">
+    <label>Type de contenu</label>
+    <div class="type-tabs">
+      <div class="type-tab active" onclick="selectType('track')" id="tab-track">🎵 Titre</div>
+      <div class="type-tab" onclick="selectType('album')" id="tab-album">💿 Album</div>
+      <div class="type-tab" onclick="selectType('playlist')" id="tab-playlist">📋 Playlist</div>
+      <div class="type-tab" onclick="selectType('episode')" id="tab-episode">🎙 Épisode</div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Lien Spotify</label>
+    <input id="inp-url" type="url" placeholder="https://open.spotify.com/track/..." />
+    <div class="hint" id="url-hint">
+      Colle un lien Spotify. Ex : <code>open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT</code>
+    </div>
+  </div>
+  <div class="field">
+    <label>Ton prénom</label>
+    <input id="inp-name" type="text" placeholder="Ex : Léa" />
+  </div>
+  <button class="btn btn-accent" onclick="addSong()" style="margin-top:4px;">
+    <span class="btn-icon">＋</span>Ajouter à la playlist
+  </button>
+
+  <div class="divider"></div>
+
+  <div class="playlist-header">
+    <div class="playlist-count" id="pl-count"><span>0</span> musique dans la playlist</div>
+  </div>
+  <div id="song-list"></div>
+</div>
+
+<!-- PAGE PLAY -->
+<div class="page" id="page-play">
+  <div id="play-empty" class="msg">
+    <div class="empty-icon">🎵</div>
+    Ajoute des musiques pour commencer
+  </div>
+
+  <div id="play-content" style="display:none">
+    <div id="pre-launch" class="launch-hero">
+      <h2>Playlist prête !</h2>
+      <p>Lance une musique aléatoire pour commencer.</p>
+      <button class="btn btn-accent" style="max-width:280px;margin:0 auto;" onclick="launchRandom()">
+        <span class="btn-icon">🎲</span>Lancer un son aléatoire
+      </button>
+    </div>
+
+    <div id="now-playing" style="display:none">
+      <div class="round-info">
+        <span class="round-badge"><span class="round-dot"></span><span id="round-badge">Round 1</span></span>
+        <button class="skip-btn" onclick="launchRandom()">Passer ⏭</button>
+      </div>
+
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
+        <div class="progress-bar-outer">
+          <div class="progress-bar-inner" id="progress-bar" style="width:0%"></div>
+        </div>
+        <div class="progress-text" id="progress-text">0 / 0</div>
+      </div>
+
+      <div class="now-playing-label">
+        <span>En cours de lecture</span>
+      </div>
+      <div class="waveform" id="waveform">
+        <div class="bar" style="height:10px"></div>
+        <div class="bar" style="height:20px"></div>
+        <div class="bar" style="height:30px"></div>
+        <div class="bar" style="height:16px"></div>
+        <div class="bar" style="height:28px"></div>
+        <div class="bar" style="height:12px"></div>
+        <div class="bar" style="height:24px"></div>
+        <div class="bar" style="height:20px"></div>
+        <div class="bar" style="height:32px"></div>
+        <div class="bar" style="height:14px"></div>
+        <div class="bar" style="height:26px"></div>
+        <div class="bar" style="height:18px"></div>
+      </div>
+
+      <div id="sp-container"></div>
+
+      <div class="embed-error" id="embed-error">
+        <p><strong>⚠️ Ce contenu ne peut pas être lu ici</strong><br>
+        Ouvre-le directement sur Spotify puis reviens voter !</p>
+        <a id="sp-fallback-link" href="#" target="_blank">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+          Ouvrir sur Spotify
+        </a>
+        <button class="btn btn-ghost" style="width:auto;padding:9px 20px;font-size:13px;" onclick="launchRandom()">⏭ Passer</button>
+      </div>
+
+      <div class="vote-section" id="vote-section">
+        <div class="vote-title">Qui a ajouté ça ?</div>
+        <div class="vote-grid" id="vote-grid"></div>
+        <button class="btn btn-ghost" style="margin-top:14px;" onclick="reveal()">Révéler la réponse 🔍</button>
+      </div>
+
+      <div id="reveal-section" style="display:none">
+        <div class="reveal-card">
+          <div class="reveal-label">Ajoutée par</div>
+          <div class="reveal-name" id="reveal-name">—</div>
+          <div class="reveal-sub" id="reveal-sub"></div>
+        </div>
+        <button class="btn btn-accent" onclick="launchRandom()">
+          <span class="btn-icon">🎲</span>Musique suivante
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE SCORES -->
+<div class="page" id="page-scores">
+  <div class="logo-wrap" style="margin-bottom:20px;">
+    <div class="logo" style="font-size:26px;">Classement</div>
+    <div class="subtitle">Les meilleurs oreilles de la soirée 🎧</div>
+  </div>
+  <div id="score-list"></div>
+  <div id="score-empty" class="msg" style="display:none">
+    <div class="empty-icon">🏆</div>
+    Pas encore de votes
+  </div>
+  <button class="btn btn-ghost" onclick="resetScores()" style="margin-top:20px; opacity:0.6; font-size:13px; padding:11px;">
+    Réinitialiser les scores
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let songs = [];
+  let current = null;
+  let round = 0;
+  let scores = {};
+  let roundVotes = {};
+  let playedIds = new Set();
+  let selectedType = 'track';
+
+  // ── TYPE SELECTOR ──────────────────────────────────────────────────────────
+  const typeHints = {
+    track:    'Colle un lien Spotify. Ex : <code>open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT</code>',
+    album:    'Ex : <code>open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3</code>',
+    playlist: 'Ex : <code>open.spotify.com/playlist/37i9dQZF1DX...</code>',
+    episode:  'Ex : <code>open.spotify.com/episode/5TrUSlGQMFN...</code>',
+  };
+  function selectType(type) {
+    selectedType = type;
+    document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + type).classList.add('active');
+    document.getElementById('url-hint').innerHTML = typeHints[type];
+    const ph = { track: 'https://open.spotify.com/track/...', album: 'https://open.spotify.com/album/...', playlist: 'https://open.spotify.com/playlist/...', episode: 'https://open.spotify.com/episode/...' };
+    document.getElementById('inp-url').placeholder = ph[type];
+  }
+
+  // ── UTILS ──────────────────────────────────────────────────────────────────
+  function extractSpotifyInfo(url) {
+    url = url.trim();
+    let m = url.match(/^spotify:(track|album|playlist|episode|show):([A-Za-z0-9]+)/);
+    if (m) return { type: m[1], id: m[2] };
+    m = url.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|playlist|episode|show)\/([A-Za-z0-9]+)/);
+    if (m) return { type: m[1], id: m[2] };
+    return null;
+  }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escAttr(s) { return String(s).replace(/'/g, "\\'"); }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  // ── CONFETTI ──────────────────────────────────────────────────────────────
+  function spawnConfetti() {
+    const colors = ['#1DB954','#22e563','#ffffff','#FFD700','#FF6B6B','#4ECDC4'];
+    for (let i = 0; i < 50; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      const size = 6 + Math.random() * 8;
+      el.style.cssText = `
+        left: ${Math.random() * 100}vw;
+        width: ${size}px; height: ${size * (0.5 + Math.random())}px;
+        background: ${colors[Math.floor(Math.random() * colors.length)]};
+        animation-duration: ${1.5 + Math.random() * 2}s;
+        animation-delay: ${Math.random() * 0.5}s;
+        transform-origin: center;
+        border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+      `;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+  }
+
+  // ── ADD SONG ──────────────────────────────────────────────────────────────
+  function addSong() {
+    const url = document.getElementById('inp-url').value.trim();
+    const name = document.getElementById('inp-name').value.trim();
+    if (!url || !name) { showToast('Remplis les deux champs !'); return; }
+    const info = extractSpotifyInfo(url);
+    if (!info) { showToast('Lien Spotify invalide'); return; }
+    songs.push({ url, spotifyType: info.type, spotifyId: info.id, addedBy: name, id: Date.now() });
+    if (!scores[name]) scores[name] = 0;
+    document.getElementById('inp-url').value = '';
+    renderPlaylist();
+    updatePlayPage();
+    showToast('🎵 Musique ajoutée !');
+  }
+  function deleteSong(id) {
+    songs = songs.filter(s => s.id !== id);
+    renderPlaylist();
+    updatePlayPage();
+  }
+  const typeEmoji = { track: '🎵', album: '💿', playlist: '📋', episode: '🎙', show: '📻' };
+  function renderPlaylist() {
+    const cnt = document.getElementById('pl-count');
+    const list = document.getElementById('song-list');
+    cnt.innerHTML = `<span>${songs.length}</span> musique${songs.length > 1 ? 's' : ''} dans la playlist`;
+    if (!songs.length) { list.innerHTML = ''; return; }
+    list.innerHTML = songs.map((s, i) => `
+      <div class="song-card" style="animation-delay:${i * 0.04}s">
+        <span class="song-num">${String(i+1).padStart(2,'0')}</span>
+        <div class="song-info">
+          <div class="song-title">${escHtml(s.addedBy)}</div>
+          <div class="song-by">${typeEmoji[s.spotifyType] || '🎵'} ${s.spotifyType} · ${s.spotifyId.slice(0,12)}…</div>
+        </div>
+        <button class="song-del" onclick="deleteSong(${s.id})" title="Supprimer">✕</button>
+      </div>
+    `).join('');
+  }
+  function updatePlayPage() {
+    const empty = document.getElementById('play-empty');
+    const content = document.getElementById('play-content');
+    if (!songs.length) { empty.style.display = ''; content.style.display = 'none'; }
+    else { empty.style.display = 'none'; content.style.display = ''; }
+  }
+
+  // ── AUTOPLAY via Spotify Embed API ────────────────────────────────────────
+  // Spotify autojoue si : on passe autoplay=1 dans le src ET l'iframe est chargée
+  // après une interaction utilisateur (c'est le cas : on clique "Lancer").
+  const embedHeights = { track: 152, album: 352, playlist: 352, episode: 232, show: 232 };
+
+  let embedController = null; // Spotify EmbedController
+
+  function buildEmbed(spotifyType, spotifyId, fallbackUrl) {
+    const h = embedHeights[spotifyType] || 152;
+    // theme=0 = dark theme Spotify
+    // autoplay=1 = demande autoplay (fonctionne si interaction préalable)
+    const src = `https://open.spotify.com/embed/${spotifyType}/${spotifyId}?utm_source=generator&theme=0&autoplay=1`;
+
+    const container = document.getElementById('sp-container');
+    container.innerHTML = `<iframe
+      id="sp-iframe"
+      src="${src}"
+      width="100%"
+      height="${h}"
+      frameBorder="0"
+      allowfullscreen=""
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      loading="eager"
+      style="border-radius:12px;"
+    ></iframe>`;
+
+    document.getElementById('sp-fallback-link').href = fallbackUrl;
+
+    // Tentative via Spotify Embed SDK pour contrôle programmatique
+    if (window.SpotifyIframe) {
+      const iframe = document.getElementById('sp-iframe');
+      window.SpotifyIframe.createController(iframe, {}, (err, ctrl) => {
+        if (!err) {
+          embedController = ctrl;
+          ctrl.play();
+        }
+      });
+    }
+  }
+
+  // ── LAUNCH RANDOM ──────────────────────────────────────────────────────────
+  function launchRandom() {
+    const remaining = songs.filter(s => !playedIds.has(s.id));
+    if (!remaining.length) {
+      showToast('🎉 Toutes les musiques ont été jouées !');
+      return;
+    }
+    round++;
+    roundVotes = {};
+    const r = remaining[Math.floor(Math.random() * remaining.length)];
+    playedIds.add(r.id);
+    current = r;
+
+    document.getElementById('pre-launch').style.display = 'none';
+    document.getElementById('now-playing').style.display = '';
+    document.getElementById('vote-section').style.display = '';
+    document.getElementById('reveal-section').style.display = 'none';
+    document.getElementById('round-badge').textContent = `Round ${round}`;
+    document.getElementById('embed-error').classList.remove('show');
+
+    // Progress bar
+    const total = songs.length;
+    const played = playedIds.size;
+    const pw = document.getElementById('progress-wrap');
+    const pb = document.getElementById('progress-bar');
+    const pt = document.getElementById('progress-text');
+    pw.style.display = 'flex';
+    pb.style.width = Math.round(played / total * 100) + '%';
+    pt.textContent = `${played} / ${total}`;
+
+    document.querySelectorAll('.bar').forEach(b => b.classList.remove('paused'));
+    renderVoteButtons();
+    buildEmbed(r.spotifyType, r.spotifyId, r.url);
+  }
+
+  // ── VOTES ──────────────────────────────────────────────────────────────────
+  function renderVoteButtons() {
+    const grid = document.getElementById('vote-grid');
+    const players = [...new Set(songs.map(s => s.addedBy))];
+    grid.innerHTML = players.map((p, i) => `
+      <button class="vote-btn" id="vb-${CSS.escape(p)}" onclick="castVote('${escAttr(p)}')" style="animation-delay:${i*0.07}s">
+        <span class="vname">${escHtml(p)}</span>
+        <div class="vcnt" id="vc-${CSS.escape(p)}">0</div>
+        <div class="vote-bar" id="vbar-${CSS.escape(p)}" style="width:0%"></div>
+      </button>
+    `).join('');
+  }
+
+  function castVote(player) {
+    roundVotes[player] = (roundVotes[player] || 0) + 1;
+    const total = Object.values(roundVotes).reduce((a,b)=>a+b,0);
+    Object.entries(roundVotes).forEach(([p, v]) => {
+      const cnt = document.getElementById('vc-' + CSS.escape(p));
+      const bar = document.getElementById('vbar-' + CSS.escape(p));
+      if (cnt) cnt.textContent = v;
+      if (bar) bar.style.width = (total > 0 ? Math.round(v/total*100) : 0) + '%';
+    });
+    document.querySelectorAll('.vote-btn').forEach(b => b.classList.remove('voted'));
+    const btn = document.getElementById('vb-' + CSS.escape(player));
+    if (btn) btn.classList.add('voted');
+    showToast(`✓ Vote pour ${player} !`);
+  }
+
+  // ── REVEAL ─────────────────────────────────────────────────────────────────
+  function reveal() {
+    if (!current) return;
+    document.getElementById('vote-section').style.display = 'none';
+    document.getElementById('reveal-section').style.display = '';
+    document.getElementById('reveal-name').textContent = current.addedBy;
+
+    const total = Object.values(roundVotes).reduce((a,b)=>a+b,0);
+    let correct = false;
+    if (total > 0) {
+      const winner = Object.entries(roundVotes).sort((a,b)=>b[1]-a[1])[0][0];
+      if (winner === current.addedBy) {
+        scores[winner] = (scores[winner] || 0) + 1;
+        document.getElementById('reveal-sub').innerHTML = `<span class="correct-badge">🎉 ${escHtml(winner)} a bien deviné ! +1 point</span>`;
+        correct = true;
+      } else {
+        document.getElementById('reveal-sub').textContent = `La majorité a voté ${winner} — raté !`;
+      }
+    } else {
+      document.getElementById('reveal-sub').textContent = 'Aucun vote ce round';
+    }
+    if (correct) spawnConfetti();
+    roundVotes = {};
+    document.querySelectorAll('.bar').forEach(b => b.classList.add('paused'));
+    renderScores();
+  }
+
+  // ── SCORES ─────────────────────────────────────────────────────────────────
+  function renderScores() {
+    const list = document.getElementById('score-list');
+    const empty = document.getElementById('score-empty');
+    const entries = Object.entries(scores).filter(([,v]) => v > 0).sort((a,b)=>b[1]-a[1]);
+    if (!entries.length) { list.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    const rankClass = ['rank-1','rank-2','rank-3'];
+    const medals = ['🥇','🥈','🥉'];
+    list.innerHTML = entries.map(([name, pts], i) => `
+      <div class="score-row" style="animation-delay:${i*0.06}s">
+        <span class="score-rank ${rankClass[i] || 'rank-other'}">${medals[i] || '#' + (i+1)}</span>
+        <span class="score-name">${escHtml(name)}</span>
+        <div class="score-right">
+          <div class="score-pts">${pts}</div>
+          <div class="score-label">point${pts>1?'s':''}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function resetScores() {
+    Object.keys(scores).forEach(k => scores[k] = 0);
+    round = 0; playedIds = new Set();
+    document.getElementById('now-playing').style.display = 'none';
+    document.getElementById('pre-launch').style.display = '';
+    document.getElementById('sp-container').innerHTML = '';
+    renderScores();
+    showToast('🔄 Partie réinitialisée');
+  }
+
+  // ── NAV ────────────────────────────────────────────────────────────────────
+  function goTab(tab) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + tab).classList.add('active');
+    const tabs = ['add','play','scores'];
+    document.querySelectorAll('.nav button')[tabs.indexOf(tab)].classList.add('active');
+    if (tab === 'scores') renderScores();
+  }
+
+  // ── KEYBOARD SHORTCUT ──────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('page-add').classList.contains('active')) addSong();
+  });
+</script>
+
+<!-- Spotify Embed SDK (pour contrôle programmatique optionnel) -->
+<script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+</body>
+</html>
